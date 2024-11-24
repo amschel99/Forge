@@ -4,6 +4,9 @@ import { idlFactory } from "./declarations/your_contract";
 import { AuthClient } from "@dfinity/auth-client";
 
 const StakingDapp = () => {
+  const [authClient, setAuthClient] = useState(null);
+  const [identity, setIdentity] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [network, setNetwork] = useState("Testnet");
   const [address, setAddress] = useState("");
   const [publicKey, setPublicKey] = useState(null);
@@ -17,6 +20,40 @@ const StakingDapp = () => {
     fee: 0,
   });
 
+  const setupAuthClient = async () => {
+    const client = await AuthClient.create();
+    setAuthClient(client);
+
+    if (await client.isAuthenticated()) {
+      const userIdentity = client.getIdentity();
+      setIdentity(userIdentity);
+      setIsAuthenticated(true);
+    }
+  };
+
+  const loginWithInternetIdentity = async () => {
+    if (!authClient) return;
+
+    await authClient.login({
+      onSuccess: () => {
+        const userIdentity = authClient.getIdentity();
+        setIdentity(userIdentity);
+        setIsAuthenticated(true);
+        console.log("Logged in successfully!");
+      },
+      identityProvider: "https://identity.ic0.app", // URL of the Internet Identity Provider
+    });
+  };
+
+  const logout = async () => {
+    if (!authClient) return;
+
+    await authClient.logout();
+    setIdentity(null);
+    setIsAuthenticated(false);
+    console.log("Logged out successfully!");
+  };
+  
   const agent = new HttpAgent({ host: "https://ic0.app" });
   const contractActor = Actor.createActor(idlFactory, {
     agent,
